@@ -1,0 +1,46 @@
+from __future__ import print_function
+import optparse
+from proton.handlers import MessagingHandler , Release, Reject
+from proton.reactor import Container
+import  random
+import time
+
+class Recv(MessagingHandler):
+    def __init__(self, url, count):
+        super(Recv, self).__init__()
+        self.url = url
+        self.expected = count
+        self.received = 0
+        self.processed = 0
+        self.returned = 0
+
+    def on_start(self, event):
+        event.container.create_receiver(self.url)
+
+    def on_message(self, event):
+        self.received += 1	
+        if self.expected == 0 or self.received <= self.expected:
+            fate = random.choice([None])
+            print("Fate: %s" %fate)
+            if fate != None:
+                self.returned += 1
+                raise fate	
+            else:
+                print("body: %s | delivery count : %d | id : %s" %(event.message.body,event.message.delivery_count,event.message.id))
+                time.sleep(random.randint(1,3))	
+                self.processed += 1
+        if self.received == self.expected:
+            event.receiver.close()
+            event.connection.close()
+    def on_connection_closed(self, event):
+        print("received: %d | processed: %d | returned: %d"%(self.received,self.processed, self.returned))
+parser = optparse.OptionParser(usage="usage: %prog [options]")
+parser.add_option("-a", "--address", default="fedoraserver.local:5672/Consumer.B.VirtualTopic.Orders",
+                  help="address from which messages are received (default %default)")
+parser.add_option("-m", "--messages", type="int", default=100,
+                  help="number of messages to receive; 0 receives indefinitely (default %default)")
+opts, args = parser.parse_args()
+
+try:
+    Container(Recv(opts.address, opts.messages)).run()
+except KeyboardInterrupt: pass
