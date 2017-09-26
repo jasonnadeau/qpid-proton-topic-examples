@@ -17,7 +17,7 @@ class Recv(MessagingHandler):
 
     def on_start(self, event):
         self.conn = event.container.connect(self.server)
-        event.container.create_receiver(self.conn,  target = self.target)
+        event.container.create_receiver(self.conn,  source=self.target)
 
     def on_message(self, event):
         self.received += 1	
